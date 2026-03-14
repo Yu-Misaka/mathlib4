@@ -7,6 +7,7 @@ module
 
 public import Mathlib.Combinatorics.SimpleGraph.Connectivity.Connected
 public import Mathlib.Data.Set.Card
+public import Mathlib.Data.ENat.Lattice
 
 /-!
 # Edge Connectivity
@@ -37,6 +38,20 @@ variable (G k) in
 /-- A graph is `k`-edge-connected if any two vertices are `k`-edge-reachable. -/
 def IsEdgeConnected : Prop := ∀ u v, G.IsEdgeReachable k u v
 
+variable (G u v) in
+/-- The edge-reachability between two vertices `u` and `v` is the supremum of all `k` such that
+`u` and `v` are `k`-edge-reachable. -/
+noncomputable def edgeReachability : ℕ∞ :=
+  by classical
+  exact ⨆ (k : ℕ) (_ : G.IsEdgeReachable k u v), (k : ℕ∞)
+
+variable (G) in
+/-- The edge-connectivity of a graph is the supremum of all `k` such that the graph is
+`k`-edge-connected. -/
+noncomputable def edgeConnectivity : ℕ∞ :=
+  by classical
+  exact ⨆ (k : ℕ) (_ : G.IsEdgeConnected k), (k : ℕ∞)
+
 @[refl, simp] lemma IsEdgeReachable.refl (u : V) : G.IsEdgeReachable k u u := fun _ _ ↦ .rfl
 
 @[deprecated (since := "2026-01-06")] alias IsEdgeReachable.rfl := IsEdgeReachable.refl
@@ -64,6 +79,179 @@ lemma IsEdgeReachable.anti (hkl : k ≤ l) (h : G.IsEdgeReachable l u v) : G.IsE
 protected lemma IsEdgeReachable.zero : G.IsEdgeReachable 0 u v := by simp [IsEdgeReachable]
 
 @[simp] protected lemma IsEdgeConnected.zero : G.IsEdgeConnected 0 := fun _ _ ↦ .zero
+
+@[gcongr]
+lemma IsEdgeConnected.anti (hkl : k ≤ l) (h : G.IsEdgeConnected l) : G.IsEdgeConnected k :=
+  fun u v ↦ (h u v).anti hkl
+
+lemma edgeReachability_ge (G : SimpleGraph V) (u v : V) (k : ℕ) :
+    G.edgeReachability u v ≥ (k : ℕ∞) ↔ G.IsEdgeReachable k u v := by
+  classical
+  simp only [edgeReachability]
+  constructor
+  · intro h
+    induction k with
+    | zero =>
+      exact .zero
+    | succ k ih =>
+      by_cases h₀ : G.IsEdgeReachable (k + 1) u v
+      · exact h₀
+      · exfalso
+        have h₁ : ∀ (l : ℕ) (h : G.IsEdgeReachable l u v), (l : ℕ∞) ≤ (k : ℕ∞) := by
+          intro l hl
+          by_contra h₂
+          have h₃ : ¬ (l : ℕ∞) ≤ (k : ℕ∞) := h₂
+          have h₄ : (l : ℕ∞) > (k : ℕ∞) := by exact lt_of_not_ge h₃
+          have h₅ : l > k := by
+            exact ENat.coe_lt_coe.mp h₄
+          have h₆ : l ≥ k + 1 := by
+            omega
+          have h₇ : G.IsEdgeReachable (k + 1) u v := hl.anti h₆
+          exact h₀ h₇
+        have h₂ : (⨆ (l : ℕ) (h : G.IsEdgeReachable l u v), (l : ℕ∞)) ≤ (k : ℕ∞) :=
+          iSup₂_le h₁
+        have h₃ : ((k : ℕ) : ℕ∞) < (((k + 1 : ℕ)) : ℕ∞) := by
+          simpa [Nat.cast_add, Nat.cast_one] using show (k : ℕ∞) < ((k + 1 : ℕ) : ℕ∞) from by
+            apply WithTop.coe_lt_coe.mpr
+            exact Nat.lt_succ_self k
+        have h₄ : (⨆ (l : ℕ) (h : G.IsEdgeReachable l u v), (l : ℕ∞)) < (((k + 1 : ℕ)) : ℕ∞) :=
+          h₂.trans_lt h₃
+        exact not_le.mpr h₄ h
+  · intro h
+    exact le_iSup₂_of_le k h le_rfl
+
+lemma edgeConnectivity_ge (G : SimpleGraph V) (k : ℕ) :
+    G.edgeConnectivity ≥ (k : ℕ∞) ↔ G.IsEdgeConnected k := by
+  classical
+  simp only [edgeConnectivity]
+  constructor
+  · intro h
+    induction k with
+    | zero =>
+      exact .zero
+    | succ k ih =>
+      by_cases h₀ : G.IsEdgeConnected (k + 1)
+      · exact h₀
+      · exfalso
+        have h₁ : ∀ (l : ℕ) (h : G.IsEdgeConnected l), (l : ℕ∞) ≤ (k : ℕ∞) := by
+          intro l hl
+          by_contra h₂
+          have h₃ : ¬ (l : ℕ∞) ≤ (k : ℕ∞) := h₂
+          have h₄ : (l : ℕ∞) > (k : ℕ∞) := by exact lt_of_not_ge h₃
+          have h₅ : l > k := by
+            exact ENat.coe_lt_coe.mp h₄
+          have h₆ : l ≥ k + 1 := by omega
+          have h₇ : G.IsEdgeConnected (k + 1) := hl.anti h₆
+          exact h₀ h₇
+        have h₂ : (⨆ (l : ℕ) (h : G.IsEdgeConnected l), (l : ℕ∞)) ≤ (k : ℕ∞) :=
+          iSup₂_le h₁
+        have h₃ : ((k : ℕ) : ℕ∞) < (((k + 1 : ℕ)) : ℕ∞) := by
+          simpa [Nat.cast_add, Nat.cast_one] using show (k : ℕ∞) < ((k + 1 : ℕ) : ℕ∞) from by
+            apply WithTop.coe_lt_coe.mpr
+            exact Nat.lt_succ_self k
+        have h₄ : (⨆ (l : ℕ) (h : G.IsEdgeConnected l), (l : ℕ∞)) < (((k + 1 : ℕ)) : ℕ∞) :=
+          h₂.trans_lt h₃
+        exact not_le.mpr h₄ h
+  · intro h
+    exact le_iSup₂_of_le k h le_rfl
+
+lemma edgeReachability_symm (G : SimpleGraph V) (u v : V) :
+    G.edgeReachability u v = G.edgeReachability v u := by
+  classical
+  simp only [edgeReachability]
+  apply le_antisymm
+  · apply iSup₂_le
+    intro l hl
+    have h₁ : G.IsEdgeReachable l v u := hl.symm
+    exact le_iSup₂_of_le l h₁ le_rfl
+  · apply iSup₂_le
+    intro l hl
+    have h₁ : G.IsEdgeReachable l u v := hl.symm
+    exact le_iSup₂_of_le l h₁ le_rfl
+
+lemma edgeReachability_self (G : SimpleGraph V) (v : V) :
+    G.edgeReachability v v = ⊤ := by
+  classical
+  have h₁ : ∀ (k : ℕ), G.IsEdgeReachable k v v := by
+    intro k
+    exact .refl v
+  have h₂ : ∀ (k : ℕ), (k : ℕ∞) ≤ G.edgeReachability v v := by
+    intro k
+    have h₃ : G.IsEdgeReachable k v v := h₁ k
+    exact (edgeReachability_ge G v v k).mpr h₃
+  have h₃ : (⊤ : ℕ∞) ≤ G.edgeReachability v v := by
+    exact ENat.forall_natCast_le_iff_le.mp fun a a_1 ↦ h₂ a
+  exact le_top.antisymm h₃
+
+lemma edgeReachability_mono (G H : SimpleGraph V) (u v : V) (hGH : G ≤ H) :
+    G.edgeReachability u v ≤ H.edgeReachability u v := by
+  classical
+  simp only [edgeReachability]
+  apply iSup₂_le
+  intro l hl
+  have h₁ : H.IsEdgeReachable l u v := IsEdgeReachable.mono hGH hl
+  exact le_iSup₂_of_le l h₁ le_rfl
+
+lemma edgeConnectivity_le_edgeReachability (G : SimpleGraph V) (u v : V) :
+    G.edgeConnectivity ≤ G.edgeReachability u v := by
+  classical
+  simp only [edgeConnectivity, edgeReachability]
+  apply iSup₂_le
+  intro k hk
+  have h₁ : G.IsEdgeReachable k u v := hk u v
+  exact le_iSup₂_of_le k h₁ le_rfl
+
+lemma edgeConnectivity_eq_iInf_edgeReachability (G : SimpleGraph V) :
+    G.edgeConnectivity = ⨅ (u : V), ⨅ (v : V), G.edgeReachability u v := by
+  classical
+  have h₁ : ∀ (k : ℕ), G.edgeConnectivity ≥ (k : ℕ∞) ↔ (⨅ (u : V), ⨅ (v : V), G.edgeReachability u v) ≥ (k : ℕ∞) := by
+    intro k
+    constructor
+    · intro h
+      have h₂ : ∀ (u v : V), G.edgeConnectivity ≤ G.edgeReachability u v := by
+        intro u v
+        exact edgeConnectivity_le_edgeReachability G u v
+      have h₃ : ∀ (u : V), G.edgeConnectivity ≤ (⨅ (v : V), G.edgeReachability u v) := by
+        intro u
+        apply le_iInf
+        intro v
+        exact h₂ u v
+      have h₄ : G.edgeConnectivity ≤ (⨅ (u : V), ⨅ (v : V), G.edgeReachability u v) := by
+        apply le_iInf
+        intro u
+        exact h₃ u
+      exact le_trans h h₄
+    · intro h
+      have h₂ : ∀ (u : V), (⨅ (v' : V), G.edgeReachability u v') ≥ (k : ℕ∞) := by
+        intro u
+        have h₃ : (⨅ (u' : V), ⨅ (v' : V), G.edgeReachability u' v') ≥ (k : ℕ∞) := h
+        have h₄ : (⨅ (u' : V), ⨅ (v' : V), G.edgeReachability u' v') ≤ (⨅ (v' : V), G.edgeReachability u v') := by
+          apply iInf_le
+        exact le_trans h₃ h₄
+      have h₃ : ∀ (u v : V), G.edgeReachability u v ≥ (k : ℕ∞) := by
+        intro u v
+        have h₄ : (⨅ (v' : V), G.edgeReachability u v') ≥ (k : ℕ∞) := h₂ u
+        have h₅ : (⨅ (v' : V), G.edgeReachability u v') ≤ G.edgeReachability u v := by
+          apply iInf_le
+        exact le_trans h₄ h₅
+      have h₄ : ∀ (u v : V), G.IsEdgeReachable k u v := by
+        intro u v
+        exact (edgeReachability_ge G u v k).mp (h₃ u v)
+      have h₅ : G.IsEdgeConnected k := h₄
+      exact (edgeConnectivity_ge G k).mpr h₅
+  have h_main : G.edgeConnectivity ≤ (⨅ (u : V), ⨅ (v : V), G.edgeReachability u v) := by
+    have h₂ : ∀ (u v : V), G.edgeConnectivity ≤ G.edgeReachability u v := by
+      intro u v
+      exact edgeConnectivity_le_edgeReachability G u v
+    have h₃ : ∀ (u : V), G.edgeConnectivity ≤ (⨅ (v : V), G.edgeReachability u v) := by
+      intro u
+      apply le_iInf
+      intro v
+      exact h₂ u v
+    exact le_iInf h₃
+  have h_other : (⨅ (u : V), ⨅ (v : V), G.edgeReachability u v) ≤ G.edgeConnectivity :=
+    ENat.forall_natCast_le_iff_le.mp (fun k hk => ((h₁ k).mpr hk).le)
+  exact le_antisymm h_main h_other
 
 @[simp]
 lemma isEdgeReachable_one : G.IsEdgeReachable 1 u v ↔ G.Reachable u v := by

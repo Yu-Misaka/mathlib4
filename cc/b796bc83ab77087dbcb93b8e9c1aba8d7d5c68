@@ -1,0 +1,31 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "ccb796bc83ab77087dbcb93b8e9c1aba8d7d5c68",
+  "prompts": {
+    "a4eaa0a28030a0c8": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a0894c21cac61808bb21ae8",
+        "model": "Doubao-Seed-2.0-Code__dev"
+      },
+      "human_author": "Yu-Misaka <109365723+Yu-Misaka@users.noreply.github.com>",
+      "messages": [],
+      "total_additions": 195,
+      "total_deletions": 70,
+      "accepted_lines": 49,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {
+    "a4eaa0a28030a0c8": {
+      "tool": "trae",
+      "conversation_id": "6a0894c21cac61808bb21ae8",
+      "session_id": "6a0894c21cac61808bb21ae8",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
